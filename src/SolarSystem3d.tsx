@@ -282,11 +282,11 @@ const SolarSystem: React.FC = () => {
     scene.add(sunGlow);
 
     // Освещение
-    const sunLight = new THREE.PointLight(0xffffff, 2.2, 220);
+    const sunLight = new THREE.PointLight(0xffffff, 3.0, 300);
     sunLight.position.set(0, 0, 0);
     scene.add(sunLight);
 
-    const ambientLight = new THREE.AmbientLight(0x333333);
+    const ambientLight = new THREE.AmbientLight(0x555555);
     scene.add(ambientLight);
 
     // Создание планет
@@ -315,7 +315,7 @@ const SolarSystem: React.FC = () => {
       planetOrbitGroup.add(planetRotationGroup);
 
       const planetGeometry = new THREE.SphereGeometry(data.size, 32, 32);
-      const planetMaterial = new THREE.MeshPhongMaterial({ map: planetTextures[data.name], shininess: 5 });
+      const planetMaterial = new THREE.MeshPhongMaterial({ map: planetTextures[data.name], shininess: 10, emissive: new THREE.Color(0x1a1a1a) });
       const planet = new THREE.Mesh(planetGeometry, planetMaterial);
       
       planetRotationGroup.add(planet);
@@ -702,13 +702,14 @@ const SolarSystem: React.FC = () => {
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-black">
-      <div ref={mountRef} className="w-full h-full" />
+    <div className="relative w-full h-screen overflow-hidden bg-black" style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden', background: '#000' }}>
+      <div ref={mountRef} className="w-full h-full" style={{ width: '100%', height: '100%' }} />
       
       {/* Бургер меню */}
       <button
         onClick={() => setMenuOpen(!menuOpen)}
         className="absolute top-4 right-4 z-50 w-12 h-12 flex flex-col items-center justify-center gap-1.5 bg-black/50 backdrop-blur-sm rounded-lg hover:bg-black/70 transition-colors"
+        style={{ position: 'absolute', top: 16, right: 16, zIndex: 50 }}
       >
         <div className="w-6 h-0.5 bg-white transition-transform" style={{ transform: menuOpen ? 'rotate(45deg) translateY(6px)' : 'none' }} />
         <div className="w-6 h-0.5 bg-white transition-opacity" style={{ opacity: menuOpen ? 0 : 1 }} />
@@ -717,7 +718,7 @@ const SolarSystem: React.FC = () => {
 
       {/* Меню */}
       {menuOpen && (
-        <div className="absolute top-20 right-4 bg-black/80 backdrop-blur-md rounded-lg p-6 text-white min-w-[250px] z-40">
+        <div className="absolute top-20 right-4 bg-black/80 backdrop-blur-md rounded-lg p-6 text-white min-w-[250px] z-40" style={{ position: 'absolute', top: 80, right: 16, zIndex: 40, background: 'rgba(0,0,0,0.8)' }}>
           <h3 className="text-xl font-bold mb-4">Настройки</h3>
           <div className="mb-6">
             <label className="block mb-2">Скорость: {speed.toFixed(1)}x</label>
@@ -742,7 +743,7 @@ const SolarSystem: React.FC = () => {
       {/* Информация о планете */}
       {selectedPlanet === -1 && (
         <>
-          <div className="absolute left-6 top-1/2 transform -translate-y-1/2 bg-black/80 backdrop-blur-md rounded-lg p-6 max-w-md text-white z-30 max-h-[80vh] overflow-y-auto">
+          <div className="absolute left-6 top-1/2 transform -translate-y-1/2 bg-black/80 backdrop-blur-md rounded-lg p-6 max-w-md text-white z-30 max-h-[80vh] overflow-y-auto" style={{ position: 'absolute', left: 24, top: '50%', transform: 'translateY(-50%)', zIndex: 30, background: 'rgba(0,0,0,0.8)', maxHeight: '80vh', overflowY: 'auto' }}>
             <h2 className="text-3xl font-bold mb-4">Солнце</h2>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2 text-sm">
@@ -783,6 +784,7 @@ const SolarSystem: React.FC = () => {
           <button
             onClick={() => setSelectedPlanet(null)}
             className="absolute top-4 left-4 bg-black/50 backdrop-blur-sm px-6 py-3 rounded-lg text-white hover:bg-black/70 transition-colors z-30"
+            style={{ position: 'absolute', top: 16, left: 16, zIndex: 30 }}
           >
             ← Назад к системе
           </button>
@@ -791,7 +793,7 @@ const SolarSystem: React.FC = () => {
       
       {selectedPlanet !== null && selectedPlanet >= 0 && (
         <>
-          <div className="absolute left-6 top-1/2 transform -translate-y-1/2 bg-black/80 backdrop-blur-md rounded-lg p-6 max-w-md text-white z-30 max-h-[80vh] overflow-y-auto">
+          <div className="absolute left-6 top-1/2 transform -translate-y-1/2 bg-black/80 backdrop-blur-md rounded-lg p-6 max-w-md text-white z-30 max-h-[80vh] overflow-y-auto" style={{ position: 'absolute', left: 24, top: '50%', transform: 'translateY(-50%)', zIndex: 30, background: 'rgba(0,0,0,0.8)', maxHeight: '80vh', overflowY: 'auto' }}>
             <h2 className="text-3xl font-bold mb-4">{planetData[selectedPlanet].name}</h2>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2 text-sm">
@@ -828,6 +830,7 @@ const SolarSystem: React.FC = () => {
           <button
             onClick={() => setSelectedPlanet(null)}
             className="absolute top-4 left-4 bg-black/50 backdrop-blur-sm px-6 py-3 rounded-lg text-white hover:bg-black/70 transition-colors z-30"
+            style={{ position: 'absolute', top: 16, left: 16, zIndex: 30 }}
           >
             ← Назад к системе
           </button>
@@ -836,7 +839,7 @@ const SolarSystem: React.FC = () => {
 
       {/* Инструкция */}
       {selectedPlanet === null && (
-        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black/50 backdrop-blur-sm px-6 py-3 rounded-lg text-white text-center z-30">
+        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black/50 backdrop-blur-sm px-6 py-3 rounded-lg text-white text-center z-30" style={{ position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 30, background: 'rgba(0,0,0,0.5)' }}>
           Нажмите на планету для подробной информации • Зажмите и тяните для вращения камеры
         </div>
       )}
