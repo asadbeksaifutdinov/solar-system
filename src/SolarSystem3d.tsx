@@ -223,14 +223,6 @@ const SolarSystem: React.FC = () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.setClearColor(0x000000, 1);
-    // Ensure correct color space for vivid colors
-    // @ts-ignore - support both newer and older three.js versions
-    renderer.outputColorSpace = THREE.SRGBColorSpace ?? undefined;
-    // @ts-ignore - fallback for older versions
-    if (!renderer.outputColorSpace && 'outputEncoding' in renderer) {
-      // @ts-ignore
-      renderer.outputEncoding = THREE.sRGBEncoding;
-    }
     // Place canvas behind UI overlays
     renderer.domElement.style.position = 'absolute';
     renderer.domElement.style.top = '0';
