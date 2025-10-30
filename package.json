@@ -45,7 +45,8 @@
     ]
   },
   "devDependencies": {
+    "@types/three": "^0.180.0",
     "gh-pages": "^6.3.0"
   },
-  "homepage": "https://zifflermonik-svg.github.io/solar-system/"
+  "homepage": "https://asadbeksaifutdinov.github.io/solar-system"
 }
