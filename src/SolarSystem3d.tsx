@@ -219,8 +219,25 @@ const SolarSystem: React.FC = () => {
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio || 1);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
+    renderer.setClearColor(0x000000, 1);
+    // Ensure correct color space for vivid colors
+    // @ts-ignore - support both newer and older three.js versions
+    renderer.outputColorSpace = THREE.SRGBColorSpace ?? undefined;
+    // @ts-ignore - fallback for older versions
+    if (!renderer.outputColorSpace && 'outputEncoding' in renderer) {
+      // @ts-ignore
+      renderer.outputEncoding = THREE.sRGBEncoding;
+    }
+    // Place canvas behind UI overlays
+    renderer.domElement.style.position = 'absolute';
+    renderer.domElement.style.top = '0';
+    renderer.domElement.style.left = '0';
+    renderer.domElement.style.width = '100%';
+    renderer.domElement.style.height = '100%';
+    renderer.domElement.style.zIndex = '0';
     mountRef.current?.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -273,11 +290,11 @@ const SolarSystem: React.FC = () => {
     scene.add(sunGlow);
 
     // Освещение
-    const sunLight = new THREE.PointLight(0xffffff, 2, 200);
+    const sunLight = new THREE.PointLight(0xffffff, 2.2, 220);
     sunLight.position.set(0, 0, 0);
     scene.add(sunLight);
 
-    const ambientLight = new THREE.AmbientLight(0x222222);
+    const ambientLight = new THREE.AmbientLight(0x333333);
     scene.add(ambientLight);
 
     // Создание планет
