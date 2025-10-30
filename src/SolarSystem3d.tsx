@@ -1,8 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 
-// @ts-nocheck
-
 type Moon = {
   mesh: THREE.Group;
   distance: number;
@@ -28,17 +26,27 @@ const SolarSystem: React.FC = () => {
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const planetsRef = useRef<PlanetInstance[]>([]);
+  const sunRef = useRef<THREE.Mesh | null>(null);
   const animationRef = useRef<number | null>(null); 
-  const controlsRef = useRef<{ isDragging: boolean; previousX: number; previousY: number; rotationX: number; rotationY: number; }>({
+  const controlsRef = useRef<{ 
+    isDragging: boolean; 
+    previousX: number; 
+    previousY: number; 
+    rotationX: number; 
+    rotationY: number;
+    dragStartX: number;
+    dragStartY: number;
+  }>({
     isDragging: false,
     previousX: 0,
     previousY: 0,
     rotationX: 0,
     rotationY: 0,
+    dragStartX: 0,
+    dragStartY: 0,
   });
   const selectedPlanetRef = useRef<number | null>(null);
   const speedRef = useRef<number>(1);
-
 
   const planetData = [
     { 
@@ -189,6 +197,8 @@ const SolarSystem: React.FC = () => {
   }, [speed]);
 
   useEffect(() => {
+    if (!mountRef.current) return;
+
     const scene = new THREE.Scene();
     sceneRef.current = scene;
 
@@ -200,7 +210,7 @@ const SolarSystem: React.FC = () => {
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
-    mountRef.current?.appendChild(renderer.domElement);
+    mountRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
     // Звездный фон
@@ -223,6 +233,7 @@ const SolarSystem: React.FC = () => {
     const sunMaterial = new THREE.MeshBasicMaterial({ map: sunTexture });
     const sun = new THREE.Mesh(sunGeometry, sunMaterial);
     scene.add(sun);
+    sunRef.current = sun;
 
     // Свечение солнца
     const glowGeometry = new THREE.SphereGeometry(3.5, 32, 32);
@@ -260,15 +271,15 @@ const SolarSystem: React.FC = () => {
     scene.add(ambientLight);
 
     // Создание планет
-    const planets = [];
-    const planetTextures = {};
+    const planets: PlanetInstance[] = [];
+    const planetTextures: { [key: string]: THREE.CanvasTexture } = {};
     
     // Предварительное создание текстур
     planetData.forEach((data) => {
       planetTextures[data.name] = createPlanetTexture(data.color, data.name);
     });
 
-    planetData.forEach((data, index) => {
+    planetData.forEach((data) => {
       // Орбита
       const orbitGeometry = new THREE.RingGeometry(data.distance - 0.05, data.distance + 0.05, 128);
       const orbitMaterial = new THREE.MeshBasicMaterial({ color: 0x444444, side: THREE.DoubleSide, transparent: true, opacity: 0.3 });
@@ -305,7 +316,7 @@ const SolarSystem: React.FC = () => {
       }
 
       // Спутники
-      const moons = [];
+      const moons: Moon[] = [];
       data.moons.forEach(moonData => {
         const moonGeometry = new THREE.SphereGeometry(moonData.size, 16, 16);
         const moonMaterial = new THREE.MeshPhongMaterial({ color: 0x888888 });
@@ -321,19 +332,21 @@ const SolarSystem: React.FC = () => {
       // Текст с названием
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
-      canvas.width = 512;
-      canvas.height = 128;
-      context.fillStyle = 'rgba(255, 255, 255, 0.9)';
-      context.font = 'Bold 48px Arial';
-      context.textAlign = 'center';
-      context.fillText(data.name, 256, 80);
-      
-      const texture = new THREE.CanvasTexture(canvas);
-      const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
-      const sprite = new THREE.Sprite(spriteMaterial);
-      sprite.position.y = data.size + 1;
-      sprite.scale.set(4, 1, 1);
-      planetRotationGroup.add(sprite);
+      if (context) {
+        canvas.width = 512;
+        canvas.height = 128;
+        context.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        context.font = 'Bold 48px Arial';
+        context.textAlign = 'center';
+        context.fillText(data.name, 256, 80);
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+        const sprite = new THREE.Sprite(spriteMaterial);
+        sprite.position.y = data.size + 1;
+        sprite.scale.set(4, 1, 1);
+        planetRotationGroup.add(sprite);
+      }
 
       // Начальная позиция на орбите
       const initialAngle = Math.random() * Math.PI * 2;
@@ -359,17 +372,24 @@ const SolarSystem: React.FC = () => {
     let currentCameraPos = new THREE.Vector3(0, 30, 40);
     let currentLookAt = new THREE.Vector3(0, 0, 0);
 
-    const onPointerDown = (event) => {
+    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+      const clientX = 'touches' in event ? event.touches[0]?.clientX : event.clientX;
+      const clientY = 'touches' in event ? event.touches[0]?.clientY : event.clientY;
+      
       controls.isDragging = true;
-      controls.previousX = event.clientX || event.touches?.[0]?.clientX || 0;
-      controls.previousY = event.clientY || event.touches?.[0]?.clientY || 0;
+      controls.previousX = clientX || 0;
+      controls.previousY = clientY || 0;
+      controls.dragStartX = clientX || 0;
+      controls.dragStartY = clientY || 0;
     };
 
-    const onPointerMove = (event) => {
+    const onPointerMove = (event: MouseEvent | TouchEvent) => {
       if (!controls.isDragging) return;
       
-      const clientX = event.clientX || event.touches?.[0]?.clientX || 0;
-      const clientY = event.clientY || event.touches?.[0]?.clientY || 0;
+      const clientX = 'touches' in event ? event.touches[0]?.clientX : event.clientX;
+      const clientY = 'touches' in event ? event.touches[0]?.clientY : event.clientY;
+      
+      if (clientX === undefined || clientY === undefined) return;
       
       const deltaX = clientX - controls.previousX;
       const deltaY = clientY - controls.previousY;
@@ -387,11 +407,17 @@ const SolarSystem: React.FC = () => {
       controls.isDragging = false;
     };
 
-    const onClick = (event) => {
-      if (controls.isDragging) return;
+    const onClick = (event: MouseEvent | TouchEvent) => {
+      // Проверка что это был клик, а не перетаскивание
+      const clientX = 'changedTouches' in event ? event.changedTouches[0]?.clientX : 'clientX' in event ? event.clientX : 0;
+      const clientY = 'changedTouches' in event ? event.changedTouches[0]?.clientY : 'clientY' in event ? event.clientY : 0;
       
-      const clientX = event.clientX || event.changedTouches?.[0]?.clientX || 0;
-      const clientY = event.clientY || event.changedTouches?.[0]?.clientY || 0;
+      const dragDistance = Math.sqrt(
+        Math.pow(clientX - controls.dragStartX, 2) + 
+        Math.pow(clientY - controls.dragStartY, 2)
+      );
+      
+      if (dragDistance > 5) return; // Это было перетаскивание, не клик
 
       const mouse = new THREE.Vector2(
         (clientX / window.innerWidth) * 2 - 1,
@@ -402,12 +428,14 @@ const SolarSystem: React.FC = () => {
       raycaster.setFromCamera(mouse, camera);
 
       // Проверка клика по солнцу
-      const sunIntersects = raycaster.intersectObject(sun);
-      if (sunIntersects.length > 0) {
-        setSelectedPlanet(-1); // -1 для солнца
-        controls.rotationX = 0;
-        controls.rotationY = 0;
-        return;
+      if (sunRef.current) {
+        const sunIntersects = raycaster.intersectObject(sunRef.current);
+        if (sunIntersects.length > 0) {
+          setSelectedPlanet(-1);
+          controls.rotationX = 0;
+          controls.rotationY = 0;
+          return;
+        }
       }
 
       const intersects = raycaster.intersectObjects(planets.map(p => p.planet));
@@ -421,18 +449,20 @@ const SolarSystem: React.FC = () => {
       }
     };
 
-    renderer.domElement.addEventListener('mousedown', onPointerDown);
-    renderer.domElement.addEventListener('mousemove', onPointerMove);
+    renderer.domElement.addEventListener('mousedown', onPointerDown as any);
+    renderer.domElement.addEventListener('mousemove', onPointerMove as any);
     renderer.domElement.addEventListener('mouseup', onPointerUp);
-    renderer.domElement.addEventListener('touchstart', onPointerDown);
-    renderer.domElement.addEventListener('touchmove', onPointerMove);
+    renderer.domElement.addEventListener('touchstart', onPointerDown as any);
+    renderer.domElement.addEventListener('touchmove', onPointerMove as any);
     renderer.domElement.addEventListener('touchend', onPointerUp);
-    renderer.domElement.addEventListener('click', onClick);
+    renderer.domElement.addEventListener('click', onClick as any);
 
     const animate = () => {
       animationRef.current = requestAnimationFrame(animate);
 
-      sun.rotation.y += 0.001;
+      if (sunRef.current) {
+        sunRef.current.rotation.y += 0.001;
+      }
 
       const currentSelectedPlanet = selectedPlanetRef.current;
       const currentSpeed = speedRef.current;
@@ -451,8 +481,10 @@ const SolarSystem: React.FC = () => {
           p.moons.forEach(moon => {
             moon.angle += 0.02;
             const moonMesh = moon.mesh.children[0];
-            moonMesh.position.x = Math.cos(moon.angle) * moon.distance;
-            moonMesh.position.z = Math.sin(moon.angle) * moon.distance;
+            if (moonMesh) {
+              moonMesh.position.x = Math.cos(moon.angle) * moon.distance;
+              moonMesh.position.z = Math.sin(moon.angle) * moon.distance;
+            }
           });
         }
       });
@@ -514,17 +546,19 @@ const SolarSystem: React.FC = () => {
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      renderer.domElement.removeEventListener('mousedown', onPointerDown);
-      renderer.domElement.removeEventListener('mousemove', onPointerMove);
+      renderer.domElement.removeEventListener('mousedown', onPointerDown as any);
+      renderer.domElement.removeEventListener('mousemove', onPointerMove as any);
       renderer.domElement.removeEventListener('mouseup', onPointerUp);
-      renderer.domElement.removeEventListener('touchstart', onPointerDown);
-      renderer.domElement.removeEventListener('touchmove', onPointerMove);
+      renderer.domElement.removeEventListener('touchstart', onPointerDown as any);
+      renderer.domElement.removeEventListener('touchmove', onPointerMove as any);
       renderer.domElement.removeEventListener('touchend', onPointerUp);
-      renderer.domElement.removeEventListener('click', onClick);
+      renderer.domElement.removeEventListener('click', onClick as any);
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
-      mountRef.current?.removeChild(renderer.domElement);
+      if (mountRef.current && renderer.domElement.parentNode === mountRef.current) {
+        mountRef.current.removeChild(renderer.domElement);
+      }
     };
   }, []);
 
@@ -547,6 +581,8 @@ const SolarSystem: React.FC = () => {
     canvas.height = size;
     const context = canvas.getContext('2d');
     
+    if (!context) return new THREE.CanvasTexture(canvas);
+    
     const gradient = context.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
     gradient.addColorStop(0, '#ffff00');
     gradient.addColorStop(0.5, '#ffaa00');
@@ -566,12 +602,14 @@ const SolarSystem: React.FC = () => {
     return texture;
   };
 
-  const createPlanetTexture = (color, name) => {
+  const createPlanetTexture = (color: number, name: string) => {
     const size = 1024;
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
     const context = canvas.getContext('2d');
+    
+    if (!context) return new THREE.CanvasTexture(canvas);
     
     const c = new THREE.Color(color);
     const baseColor = `rgb(${c.r * 255}, ${c.g * 255}, ${c.b * 255})`;
