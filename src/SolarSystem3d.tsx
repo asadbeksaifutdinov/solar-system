@@ -18,27 +18,6 @@ type PlanetInstance = {
   moons: Moon[];
 };
 
-type PlanetInfo = {
-  diameter: string;
-  distance_from_sun: string;
-  day: string;
-  year: string;
-  temperature: string;
-  description: string;
-};
-
-type PlanetData = {
-  name: string;
-  size: number;
-  distance: number;
-  color: number;
-  speed: number;
-  rotSpeed: number;
-  moons: { size: number; distance: number }[];
-  info: PlanetInfo;
-  hasRings?: boolean;
-};
-
 const SolarSystem: React.FC = () => {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const [selectedPlanet, setSelectedPlanet] = useState<number | null>(null);
@@ -61,7 +40,7 @@ const SolarSystem: React.FC = () => {
   const speedRef = useRef<number>(1);
 
 
-  const planetData: PlanetData[] = [
+  const planetData = [
     { 
       name: 'Меркурий', 
       size: 0.4, 
@@ -219,17 +198,8 @@ const SolarSystem: React.FC = () => {
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(window.devicePixelRatio || 1);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
-    renderer.setClearColor(0x000000, 1);
-    // Place canvas behind UI overlays
-    renderer.domElement.style.position = 'absolute';
-    renderer.domElement.style.top = '0';
-    renderer.domElement.style.left = '0';
-    renderer.domElement.style.width = '100%';
-    renderer.domElement.style.height = '100%';
-    renderer.domElement.style.zIndex = '0';
     mountRef.current?.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -282,16 +252,16 @@ const SolarSystem: React.FC = () => {
     scene.add(sunGlow);
 
     // Освещение
-    const sunLight = new THREE.PointLight(0xffffff, 3.0, 300);
+    const sunLight = new THREE.PointLight(0xffffff, 2, 200);
     sunLight.position.set(0, 0, 0);
     scene.add(sunLight);
 
-    const ambientLight = new THREE.AmbientLight(0x555555);
+    const ambientLight = new THREE.AmbientLight(0x222222);
     scene.add(ambientLight);
 
     // Создание планет
-    const planets: PlanetInstance[] = [];
-    const planetTextures: Record<string, THREE.Texture> = {};
+    const planets = [];
+    const planetTextures = {};
     
     // Предварительное создание текстур
     planetData.forEach((data) => {
@@ -315,7 +285,7 @@ const SolarSystem: React.FC = () => {
       planetOrbitGroup.add(planetRotationGroup);
 
       const planetGeometry = new THREE.SphereGeometry(data.size, 32, 32);
-      const planetMaterial = new THREE.MeshPhongMaterial({ map: planetTextures[data.name], shininess: 10, emissive: new THREE.Color(0x1a1a1a) });
+      const planetMaterial = new THREE.MeshPhongMaterial({ map: planetTextures[data.name], shininess: 5 });
       const planet = new THREE.Mesh(planetGeometry, planetMaterial);
       
       planetRotationGroup.add(planet);
@@ -335,7 +305,7 @@ const SolarSystem: React.FC = () => {
       }
 
       // Спутники
-      const moons: Moon[] = [];
+      const moons = [];
       data.moons.forEach(moonData => {
         const moonGeometry = new THREE.SphereGeometry(moonData.size, 16, 16);
         const moonMaterial = new THREE.MeshPhongMaterial({ color: 0x888888 });
@@ -353,12 +323,10 @@ const SolarSystem: React.FC = () => {
       const context = canvas.getContext('2d');
       canvas.width = 512;
       canvas.height = 128;
-      if (context) {
-        context.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        context.font = 'Bold 48px Arial';
-        context.textAlign = 'center';
-        context.fillText(data.name, 256, 80);
-      }
+      context.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      context.font = 'Bold 48px Arial';
+      context.textAlign = 'center';
+      context.fillText(data.name, 256, 80);
       
       const texture = new THREE.CanvasTexture(canvas);
       const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
@@ -391,26 +359,17 @@ const SolarSystem: React.FC = () => {
     let currentCameraPos = new THREE.Vector3(0, 30, 40);
     let currentLookAt = new THREE.Vector3(0, 0, 0);
 
-    const getClientXY = (e: MouseEvent | TouchEvent): { x: number; y: number } => {
-      if ('touches' in e) {
-        const t = e.touches[0] ?? (e as any).changedTouches?.[0];
-        return { x: t?.clientX ?? 0, y: t?.clientY ?? 0 };
-      }
-      const m = e as MouseEvent;
-      return { x: m.clientX, y: m.clientY };
-    };
-
-    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+    const onPointerDown = (event) => {
       controls.isDragging = true;
-      const { x, y } = getClientXY(event);
-      controls.previousX = x;
-      controls.previousY = y;
+      controls.previousX = event.clientX || event.touches?.[0]?.clientX || 0;
+      controls.previousY = event.clientY || event.touches?.[0]?.clientY || 0;
     };
 
-    const onPointerMove = (event: MouseEvent | TouchEvent) => {
+    const onPointerMove = (event) => {
       if (!controls.isDragging) return;
       
-      const { x: clientX, y: clientY } = getClientXY(event);
+      const clientX = event.clientX || event.touches?.[0]?.clientX || 0;
+      const clientY = event.clientY || event.touches?.[0]?.clientY || 0;
       
       const deltaX = clientX - controls.previousX;
       const deltaY = clientY - controls.previousY;
@@ -428,20 +387,11 @@ const SolarSystem: React.FC = () => {
       controls.isDragging = false;
     };
 
-    const onClick = (event: MouseEvent | TouchEvent) => {
+    const onClick = (event) => {
       if (controls.isDragging) return;
       
-      let clientX = 0;
-      let clientY = 0;
-      if ('changedTouches' in (event as any)) {
-        const t = (event as TouchEvent).changedTouches?.[0];
-        clientX = t?.clientX ?? 0;
-        clientY = t?.clientY ?? 0;
-      } else {
-        const m = event as MouseEvent;
-        clientX = m.clientX;
-        clientY = m.clientY;
-      }
+      const clientX = event.clientX || event.changedTouches?.[0]?.clientX || 0;
+      const clientY = event.clientY || event.changedTouches?.[0]?.clientY || 0;
 
       const mouse = new THREE.Vector2(
         (clientX / window.innerWidth) * 2 - 1,
@@ -498,7 +448,7 @@ const SolarSystem: React.FC = () => {
           p.orbitGroup.position.z = Math.sin(p.angle) * p.data.distance;
         } else if (currentSelectedPlanet === index) {
           // Спутники
-          p.moons.forEach((moon: Moon) => {
+          p.moons.forEach(moon => {
             moon.angle += 0.02;
             const moonMesh = moon.mesh.children[0];
             moonMesh.position.x = Math.cos(moon.angle) * moon.distance;
@@ -590,15 +540,12 @@ const SolarSystem: React.FC = () => {
     }
   }, [selectedPlanet]);
 
-  const createSunTexture = (): THREE.Texture => {
+  const createSunTexture = () => {
     const size = 512;
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
     const context = canvas.getContext('2d');
-    if (!context) {
-      return new THREE.CanvasTexture(canvas);
-    }
     
     const gradient = context.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
     gradient.addColorStop(0, '#ffff00');
@@ -619,15 +566,12 @@ const SolarSystem: React.FC = () => {
     return texture;
   };
 
-  const createPlanetTexture = (color: number, name: string): THREE.Texture => {
+  const createPlanetTexture = (color, name) => {
     const size = 1024;
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
     const context = canvas.getContext('2d');
-    if (!context) {
-      return new THREE.CanvasTexture(canvas);
-    }
     
     const c = new THREE.Color(color);
     const baseColor = `rgb(${c.r * 255}, ${c.g * 255}, ${c.b * 255})`;
@@ -702,14 +646,13 @@ const SolarSystem: React.FC = () => {
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-black" style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden', background: '#000' }}>
-      <div ref={mountRef} className="w-full h-full" style={{ width: '100%', height: '100%' }} />
+    <div className="relative w-full h-screen overflow-hidden bg-black">
+      <div ref={mountRef} className="w-full h-full" />
       
       {/* Бургер меню */}
       <button
         onClick={() => setMenuOpen(!menuOpen)}
         className="absolute top-4 right-4 z-50 w-12 h-12 flex flex-col items-center justify-center gap-1.5 bg-black/50 backdrop-blur-sm rounded-lg hover:bg-black/70 transition-colors"
-        style={{ position: 'absolute', top: 16, right: 16, zIndex: 50 }}
       >
         <div className="w-6 h-0.5 bg-white transition-transform" style={{ transform: menuOpen ? 'rotate(45deg) translateY(6px)' : 'none' }} />
         <div className="w-6 h-0.5 bg-white transition-opacity" style={{ opacity: menuOpen ? 0 : 1 }} />
@@ -718,7 +661,7 @@ const SolarSystem: React.FC = () => {
 
       {/* Меню */}
       {menuOpen && (
-        <div className="absolute top-20 right-4 bg-black/80 backdrop-blur-md rounded-lg p-6 text-white min-w-[250px] z-40" style={{ position: 'absolute', top: 80, right: 16, zIndex: 40, background: 'rgba(0,0,0,0.8)' }}>
+        <div className="absolute top-20 right-4 bg-black/80 backdrop-blur-md rounded-lg p-6 text-white min-w-[250px] z-40">
           <h3 className="text-xl font-bold mb-4">Настройки</h3>
           <div className="mb-6">
             <label className="block mb-2">Скорость: {speed.toFixed(1)}x</label>
@@ -743,7 +686,7 @@ const SolarSystem: React.FC = () => {
       {/* Информация о планете */}
       {selectedPlanet === -1 && (
         <>
-          <div className="absolute left-6 top-1/2 transform -translate-y-1/2 bg-black/80 backdrop-blur-md rounded-lg p-6 max-w-md text-white z-30 max-h-[80vh] overflow-y-auto" style={{ position: 'absolute', left: 24, top: '50%', transform: 'translateY(-50%)', zIndex: 30, background: 'rgba(0,0,0,0.8)', maxHeight: '80vh', overflowY: 'auto' }}>
+          <div className="absolute left-6 top-1/2 transform -translate-y-1/2 bg-black/80 backdrop-blur-md rounded-lg p-6 max-w-md text-white z-30 max-h-[80vh] overflow-y-auto">
             <h2 className="text-3xl font-bold mb-4">Солнце</h2>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2 text-sm">
@@ -784,7 +727,6 @@ const SolarSystem: React.FC = () => {
           <button
             onClick={() => setSelectedPlanet(null)}
             className="absolute top-4 left-4 bg-black/50 backdrop-blur-sm px-6 py-3 rounded-lg text-white hover:bg-black/70 transition-colors z-30"
-            style={{ position: 'absolute', top: 16, left: 16, zIndex: 30 }}
           >
             ← Назад к системе
           </button>
@@ -793,7 +735,7 @@ const SolarSystem: React.FC = () => {
       
       {selectedPlanet !== null && selectedPlanet >= 0 && (
         <>
-          <div className="absolute left-6 top-1/2 transform -translate-y-1/2 bg-black/80 backdrop-blur-md rounded-lg p-6 max-w-md text-white z-30 max-h-[80vh] overflow-y-auto" style={{ position: 'absolute', left: 24, top: '50%', transform: 'translateY(-50%)', zIndex: 30, background: 'rgba(0,0,0,0.8)', maxHeight: '80vh', overflowY: 'auto' }}>
+          <div className="absolute left-6 top-1/2 transform -translate-y-1/2 bg-black/80 backdrop-blur-md rounded-lg p-6 max-w-md text-white z-30 max-h-[80vh] overflow-y-auto">
             <h2 className="text-3xl font-bold mb-4">{planetData[selectedPlanet].name}</h2>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2 text-sm">
@@ -830,7 +772,6 @@ const SolarSystem: React.FC = () => {
           <button
             onClick={() => setSelectedPlanet(null)}
             className="absolute top-4 left-4 bg-black/50 backdrop-blur-sm px-6 py-3 rounded-lg text-white hover:bg-black/70 transition-colors z-30"
-            style={{ position: 'absolute', top: 16, left: 16, zIndex: 30 }}
           >
             ← Назад к системе
           </button>
@@ -839,7 +780,7 @@ const SolarSystem: React.FC = () => {
 
       {/* Инструкция */}
       {selectedPlanet === null && (
-        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black/50 backdrop-blur-sm px-6 py-3 rounded-lg text-white text-center z-30" style={{ position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 30, background: 'rgba(0,0,0,0.5)' }}>
+        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black/50 backdrop-blur-sm px-6 py-3 rounded-lg text-white text-center z-30">
           Нажмите на планету для подробной информации • Зажмите и тяните для вращения камеры
         </div>
       )}
